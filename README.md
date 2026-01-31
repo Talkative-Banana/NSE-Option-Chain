@@ -26,6 +26,6 @@ A live NIFTY option chain dashboard built with Streamlit, fetching data directly
 
 ## Live Demo
 
-Hosted on Streamlit Community Cloud: [Check out](https://option-chain.streamlit.com)
+Hosted on Streamlit Community Cloud: [Check out](https://option-chain.streamlit.app)
 
 ![alt text](image.png)

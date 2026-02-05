@@ -20,16 +20,28 @@ st.caption("Data Source: NSE India")
 @st.cache_data(ttl=30)
 def fetch_option_chain(symbol, expiry):
     url = f"https://www.nseindia.com/api/option-chain-v3?type=Indices&symbol={symbol}&expiry={expiry}"
+
     headers = {
-        "User-Agent": "Mozilla/5.0",
+        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64)",
         "Accept": "application/json",
         "Referer": "https://www.nseindia.com/",
     }
+
     session = requests.Session()
     session.headers.update(headers)
-    response = session.get(url, timeout=10)
-    response.raise_for_status()
-    return response.json()
+
+    # warm-up (important)
+    session.get("https://www.nseindia.com", timeout=10)
+
+    resp = session.get(url, timeout=10)
+
+    if resp.status_code != 200:
+        return None
+
+    if not resp.text or not resp.text.strip().startswith("{"):
+        return None
+
+    return resp.json()
 
 
 # -------------------------------------------------
@@ -50,7 +62,19 @@ session.headers.update(
         "Referer": "https://www.nseindia.com/",
     }
 )
-base_data = session.get(base_url, timeout=10).json()
+
+
+resp = session.get(base_url, timeout=10)
+
+if resp.status_code != 200:
+    st.error(f"NSE blocked request (HTTP {resp.status_code})")
+    st.stop()
+
+if not resp.text or not resp.text.strip().startswith("{"):
+    st.error("NSE returned non-JSON response (blocked by NSE)")
+    st.stop()
+
+base_data = resp.json()
 
 expiries = base_data["records"]["expiryDates"]
 underlying = base_data["records"]["underlyingValue"]
@@ -62,7 +86,7 @@ timestamp = base_data["records"]["timestamp"]
 st.sidebar.header("⚙️ Settings")
 expiry = st.sidebar.selectbox("Select Expiry Date", expiries, key="selected_expiry")
 auto_refresh = st.sidebar.checkbox("🔁 Auto Refresh", value=True)
-refresh_interval = st.sidebar.slider("Refresh interval (seconds)", 5, 120, 15)
+refresh_interval = st.sidebar.slider("Refresh interval (seconds)", 15, 120, 15)
 
 # -------------------------------------------------
 # FETCH OPTION CHAIN DATA
@@ -204,4 +228,5 @@ st.dataframe(highlight(df), width="stretch", height=800)
 # -------------------------------------------------
 if auto_refresh:
     time.sleep(refresh_interval)
+    st.rerun()
     st.rerun()

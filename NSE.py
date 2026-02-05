@@ -35,7 +35,7 @@ def fetch_option_chain(symbol, expiry):
 # -------------------------------------------------
 # INITIAL LOAD
 # -------------------------------------------------
-DEFAULT_EXPIRY = "03-Feb-2026"
+DEFAULT_EXPIRY = "28-Apr-2026"
 if "selected_expiry" not in st.session_state:
     st.session_state.selected_expiry = DEFAULT_EXPIRY
 else:
@@ -60,8 +60,7 @@ timestamp = base_data["records"]["timestamp"]
 # SIDEBAR SETTINGS
 # -------------------------------------------------
 st.sidebar.header("⚙️ Settings")
-expiry = st.sidebar.selectbox(
-    "Select Expiry Date", expiries, key="selected_expiry")
+expiry = st.sidebar.selectbox("Select Expiry Date", expiries, key="selected_expiry")
 auto_refresh = st.sidebar.checkbox("🔁 Auto Refresh", value=True)
 refresh_interval = st.sidebar.slider("Refresh interval (seconds)", 5, 120, 15)
 
@@ -104,16 +103,25 @@ def build_option_row(item, underlying):
         "BuyVol_Put": pe.get("totalBuyQuantity"),
         "IV_Put": pe.get("impliedVolatility"),
         # D
-        "D%_D" : (ce.get("openInterest") - pe.get("openInterest")) * 100 / (ce.get("openInterest") + pe.get("openInterest"))
+        "D%_D": (ce.get("openInterest") - pe.get("openInterest"))
+        * 100
+        / (ce.get("openInterest") + pe.get("openInterest")),
     }
 
 
-rows = [
-    build_option_row(item, underlying)
-    for item in records
-    if build_option_row(item, underlying)
-]
-df = pd.DataFrame(rows).sort_values("Strike")
+rows = []
+for item in records:
+    row = build_option_row(item, underlying)
+    if row is not None:
+        rows.append(row)
+
+df = pd.DataFrame(rows)
+
+if df.empty:
+    st.warning("No option data available near ATM")
+    st.stop()
+
+df = df.sort_values("Strike")
 
 # -------------------------------------------------
 # CREATE MULTIINDEX COLUMNS FOR CALL/PUT
@@ -170,9 +178,17 @@ def highlight(df):
     styled = styled.applymap(
         lambda v: "font-weight:bold; background-color:#917D7D", subset=[("", "Strike")]
     )
-    
+
     styled = styled.applymap(
-    lambda v: ("font-weight:bold; background-color:#ff0000" if v > 0 else "font-weight:bold; background-color:#006400" if v < 0 else ""), subset=[("D", "D%")])
+        lambda v: (
+            "font-weight:bold; background-color:#ff0000"
+            if v > 0
+            else "font-weight:bold; background-color:#006400"
+            if v < 0
+            else ""
+        ),
+        subset=[("D", "D%")],
+    )
 
     return styled
 

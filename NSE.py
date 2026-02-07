@@ -1,9 +1,9 @@
-import time
-from datetime import datetime
+from datetime import datetime, time
 
 import pandas as pd
 import requests
 import streamlit as st
+from zoneinfo import ZoneInfo
 
 # -------------------------------------------------
 # PAGE CONFIG
@@ -63,7 +63,7 @@ session.headers.update(
     }
 )
 
-
+print("Calling API to refresh data")
 resp = session.get(base_url, timeout=10)
 
 if resp.status_code != 200:
@@ -86,7 +86,7 @@ timestamp = base_data["records"]["timestamp"]
 st.sidebar.header("⚙️ Settings")
 expiry = st.sidebar.selectbox("Select Expiry Date", expiries, key="selected_expiry")
 auto_refresh = st.sidebar.checkbox("🔁 Auto Refresh", value=True)
-refresh_interval = st.sidebar.slider("Refresh interval (seconds)", 15, 120, 15)
+refresh_interval = st.sidebar.slider("Refresh interval (seconds)", 30, 120, 30)
 
 # -------------------------------------------------
 # FETCH OPTION CHAIN DATA
@@ -223,10 +223,25 @@ def highlight(df):
 st.subheader("📈 Option Chain")
 st.dataframe(highlight(df), width="stretch", height=800)
 
+IST = ZoneInfo("Asia/Kolkata")
+
+now = datetime.now(IST)
+
+# Check weekday (Mon=0 ... Sun=6)
+is_weekday = now.weekday() < 5
+
+# Market hours
+start = time(9, 0)
+end = time(15, 30)
+
+is_market_time = start <= now.time() <= end
+
 # -------------------------------------------------
 # AUTO REFRESH
 # -------------------------------------------------
-if auto_refresh:
+if auto_refresh and is_weekday and is_market_time:
+    print("✅ Rerunning the job")
     time.sleep(refresh_interval)
     st.rerun()
-    st.rerun()
+else:
+    print("⛔ Market Closed")

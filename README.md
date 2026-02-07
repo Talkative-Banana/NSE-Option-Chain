@@ -22,10 +22,27 @@ A live NIFTY option chain dashboard built with Streamlit, fetching data directly
 
 - Supports auto-refresh with adjustable interval.
 
-- Multi-level table headers for Call / Strike / Put grouping.
-
-## Live Demo
-
-Hosted on Streamlit Community Cloud: [Check out](https://option-chain.streamlit.app)
+- Multi-level table headers for Call / Strike / Put grouping
 
 ![alt text](image.png)
+
+## Setup & Installtion
+
+Make sure you have the latest version of Python installed.
+
+```bash
+git clone https://github.com/Talkative-Banana/NSE-Option-Chain.git
+```
+CD into the directory
+
+```bash
+python3 -m venv venv
+. venv/bin/activate
+pip install -r requirements.txt
+```
+
+## Running The App
+
+```bash
+streamlit run NSE.py
+```

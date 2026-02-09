@@ -1,4 +1,6 @@
-from datetime import datetime, time
+import time
+from datetime import datetime
+from datetime import time as dt_time
 
 import pandas as pd
 import requests
@@ -231,8 +233,8 @@ now = datetime.now(IST)
 is_weekday = now.weekday() < 5
 
 # Market hours
-start = time(9, 0)
-end = time(15, 30)
+start = dt_time(9, 0)
+end = dt_time(15, 30)
 
 is_market_time = start <= now.time() <= end
 

@@ -1,11 +1,11 @@
 import time
 from datetime import datetime
 from datetime import time as dt_time
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 import requests
 import streamlit as st
-from zoneinfo import ZoneInfo
 
 # -------------------------------------------------
 # PAGE CONFIG
@@ -52,8 +52,12 @@ def fetch_option_chain(symbol, expiry):
 DEFAULT_EXPIRY = "28-Apr-2026"
 if "selected_expiry" not in st.session_state:
     st.session_state.selected_expiry = DEFAULT_EXPIRY
+    st.session_state.prev_oi = {}
 else:
     DEFAULT_EXPIRY = st.session_state.selected_expiry
+
+if "prev_expiry" not in st.session_state:
+    st.session_state.prev_expiry = DEFAULT_EXPIRY
 
 base_url = f"https://www.nseindia.com/api/option-chain-v3?type=Indices&symbol=NIFTY&expiry={DEFAULT_EXPIRY}"
 session = requests.Session()
@@ -90,10 +94,18 @@ expiry = st.sidebar.selectbox("Select Expiry Date", expiries, key="selected_expi
 auto_refresh = st.sidebar.checkbox("🔁 Auto Refresh", value=True)
 refresh_interval = st.sidebar.slider("Refresh interval (seconds)", 30, 120, 30)
 
+if st.session_state.prev_expiry != expiry:
+    st.session_state.prev_oi = {}
+    st.session_state.prev_expiry = expiry
+
 # -------------------------------------------------
 # FETCH OPTION CHAIN DATA
 # -------------------------------------------------
 data = fetch_option_chain("NIFTY", expiry)
+if data is None:
+    st.error("Failed to fetch option chain data from NSE.")
+    st.stop()
+
 records = data["records"]["data"]
 
 # -------------------------------------------------
@@ -107,31 +119,31 @@ def build_option_row(item, underlying):
         return None
     ce = item.get("CE", {})
     pe = item.get("PE", {})
+
+    ce_oi = ce.get("openInterest") or 0
+    pe_oi = pe.get("openInterest") or 0
+
+    prev = st.session_state.prev_oi.get(strike, {"ce": ce_oi, "pe": pe_oi})
+
+    ce_diff = ce_oi - prev["ce"]
+    pe_diff = pe_oi - prev["pe"]
+
+    # update stored value
+    st.session_state.prev_oi[strike] = {"ce": ce_oi, "pe": pe_oi}
+
     return {
-        # Call columns
         "IV_Call": ce.get("impliedVolatility"),
-        "BuyVol_Call": ce.get("totalBuyQuantity"),
-        "SellVol_Call": ce.get("totalSellQuantity"),
-        "NetVol_Call": (ce.get("totalBuyQuantity") or 0)
-        - (ce.get("totalSellQuantity") or 0),
-        "OI_Call": ce.get("openInterest"),
+        "OI_Call": ce_oi,
+        "OI_Call (current - prev)": ce_diff,
         "OI_Chg%_Call": ce.get("pchangeinOpenInterest"),
         "LTP_Call": ce.get("lastPrice"),
-        # Strike
         "Strike": strike,
-        # Put columns
         "LTP_Put": pe.get("lastPrice"),
         "OI_Chg%_Put": pe.get("pchangeinOpenInterest"),
-        "OI_Put": pe.get("openInterest"),
-        "NetVol_Put": (pe.get("totalBuyQuantity") or 0)
-        - (pe.get("totalSellQuantity") or 0),
-        "SellVol_Put": pe.get("totalSellQuantity"),
-        "BuyVol_Put": pe.get("totalBuyQuantity"),
+        "OI_Put": pe_oi,
+        "OI_Put (current - prev)": pe_diff,
         "IV_Put": pe.get("impliedVolatility"),
-        # D
-        "D%_D": (ce.get("openInterest") - pe.get("openInterest"))
-        * 100
-        / (ce.get("openInterest") + pe.get("openInterest")),
+        "D%_D": (ce_oi - pe_oi) * 100 / (ce_oi + pe_oi) if (ce_oi + pe_oi) else 0,
     }
 
 
@@ -180,32 +192,37 @@ c3.metric("Last Updated", dt.strftime("%H:%M:%S"))
 # STYLING FUNCTION
 # -------------------------------------------------
 
-
 def highlight(df):
+
     styled = df.style
-    # Highlight max/min for key columns
+
+    # Highlight max/min OI change %
     for col in [
-        ("Call", "NetVol"),
-        ("Put", "NetVol"),
         ("Call", "OI_Chg%"),
         ("Put", "OI_Chg%"),
     ]:
         styled = styled.highlight_max(subset=[col], color="#006400")
         styled = styled.highlight_min(subset=[col], color="#ff6666")
-    # Highlight ATM strike row
+
+    # ATM strike
     atm = min(df[("", "Strike")], key=lambda x: abs(x - underlying))
+
     styled = styled.apply(
         lambda r: [
-            "background-color:#ff0000" if r[("", "Strike")] == atm else "" for _ in r
+            "background-color:#ff4d4d" if r[("", "Strike")] == atm else ""
+            for _ in r
         ],
         axis=1,
     )
-    # Highlight Strike column
-    styled = styled.applymap(
-        lambda v: "font-weight:bold; background-color:#917D7D", subset=[("", "Strike")]
+
+    # Strike column styling
+    styled = styled.map(
+        lambda v: "font-weight:bold; background-color:#917D7D",
+        subset=[("", "Strike")]
     )
 
-    styled = styled.applymap(
+    # D% coloring
+    styled = styled.map(
         lambda v: (
             "font-weight:bold; background-color:#ff0000"
             if v > 0
@@ -216,6 +233,33 @@ def highlight(df):
         subset=[("D", "D%")],
     )
 
+    # Detect diff column names safely
+    call_diff_col = [c for c in df.columns if c[0] == "Call" and "prev" in c[1]]
+    put_diff_col = [c for c in df.columns if c[0] == "Put" and "prev" in c[1]]
+
+    # CALL difference (positive green, negative red)
+    if call_diff_col:
+        styled = styled.map(
+            lambda v: (
+                "background-color:#006400; color:white"
+                if v > 0 else
+                "background-color:#8B0000; color:white"
+                if v < 0 else ""
+            ),
+            subset=call_diff_col
+        )
+
+    # PUT difference (positive red, negative green)
+    if put_diff_col:
+        styled = styled.map(
+            lambda v: (
+                "background-color:#8B0000; color:white"
+                if v > 0 else
+                "background-color:#006400; color:white"
+                if v < 0 else ""
+            ),
+            subset=put_diff_col
+        )
     return styled
 
 
@@ -223,7 +267,7 @@ def highlight(df):
 # DISPLAY DATA
 # -------------------------------------------------
 st.subheader("📈 Option Chain")
-st.dataframe(highlight(df), width="stretch", height=800)
+st.table(highlight(df))
 
 IST = ZoneInfo("Asia/Kolkata")
 

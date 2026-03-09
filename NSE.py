@@ -19,7 +19,6 @@ st.caption("Data Source: NSE India")
 # -------------------------------------------------
 
 
-@st.cache_data(ttl=30)
 def fetch_option_chain(symbol, expiry):
     url = f"https://www.nseindia.com/api/option-chain-v3?type=Indices&symbol={symbol}&expiry={expiry}"
 

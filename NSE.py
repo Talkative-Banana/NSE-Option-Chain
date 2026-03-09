@@ -191,17 +191,32 @@ c3.metric("Last Updated", dt.strftime("%H:%M:%S"))
 # STYLING FUNCTION
 # -------------------------------------------------
 
+
+def color_scale(v):
+    max_val = 50
+    intensity = min(abs(v) / max_val, 1)
+
+    if v > 0:
+        g = int(255 * intensity)
+        text = "black" if g > 150 else "white"
+        return f"background-color: rgb(0,{g},0); color:{text}"
+    elif v < 0:
+        r = int(255 * intensity)
+        text = "black" if r > 150 else "white"
+        return f"background-color: rgb({r},0,0); color:{text}"
+    return ""
+
 def highlight(df):
 
     styled = df.style
 
     # Highlight max/min OI change %
-    for col in [
-        ("Call", "OI_Chg%"),
-        ("Put", "OI_Chg%"),
-    ]:
-        styled = styled.highlight_max(subset=[col], color="#006400")
-        styled = styled.highlight_min(subset=[col], color="#ff6666")
+    # for col in [
+    #     ("Call", "OI_Chg%"),
+    #     ("Put", "OI_Chg%"),
+    # ]:
+    #     styled = styled.highlight_max(subset=[col], color="#006400")
+    #     styled = styled.highlight_min(subset=[col], color="#ff6666")
 
     # ATM strike
     atm = min(df[("", "Strike")], key=lambda x: abs(x - underlying))
@@ -212,6 +227,11 @@ def highlight(df):
             for _ in r
         ],
         axis=1,
+    )
+
+    styled = styled.map(
+        color_scale,
+        subset=[("Call", "OI_Chg%"), ("Put", "OI_Chg%")],
     )
 
     # Strike column styling

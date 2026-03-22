@@ -114,7 +114,8 @@ records = data["records"]["data"]
 
 def build_option_row(item, underlying):
     strike = item["strikePrice"]
-    if abs(strike - underlying) > 500:
+    diff = abs(underlying - 22500)
+    if abs(strike - underlying) > diff:
         return None
     ce = item.get("CE", {})
     pe = item.get("PE", {})
@@ -209,15 +210,7 @@ def color_scale(v):
 def highlight(df):
 
     styled = df.style
-
-    # Highlight max/min OI change %
-    # for col in [
-    #     ("Call", "OI_Chg%"),
-    #     ("Put", "OI_Chg%"),
-    # ]:
-    #     styled = styled.highlight_max(subset=[col], color="#006400")
-    #     styled = styled.highlight_min(subset=[col], color="#ff6666")
-
+    
     # ATM strike
     atm = min(df[("", "Strike")], key=lambda x: abs(x - underlying))
 
@@ -279,6 +272,23 @@ def highlight(df):
             ),
             subset=put_diff_col
         )
+    
+    # Highlight max/min OI change %
+    for col, sub in [("Call", "OI"), ("Put", "OI")]:
+        mask = df[("", "Strike")] % 500 != 0
+        filtered = df.loc[mask, (col, sub)]
+        
+        if not filtered.empty:
+            max_idx = filtered.idxmax()
+
+            styled = styled.apply(
+                lambda row, col=col, sub=sub, max_i=max_idx: [
+                    "background-color: #006400" if row.name == max_i and i == row.index.get_loc((col, sub)) else ""
+                    for i, _ in enumerate(row)
+                ],
+                axis=1
+            )
+        
     return styled
 
 

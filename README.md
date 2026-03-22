@@ -2,6 +2,8 @@
 
 A live NIFTY option chain dashboard built with Streamlit, fetching data directly from NSE India.
 
+[live demo](https://nse-option-chain.streamlit.app/)
+
 ## Features
 
 - Displays live NIFTY option chain data.
@@ -26,7 +28,7 @@ A live NIFTY option chain dashboard built with Streamlit, fetching data directly
 
 ![alt text](image.png)
 
-## Setup & Installtion
+## Setup & Installation
 
 Make sure you have the latest version of Python installed.
 

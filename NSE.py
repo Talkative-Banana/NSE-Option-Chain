@@ -114,7 +114,7 @@ records = data["records"]["data"]
 
 def build_option_row(item, underlying):
     strike = item["strikePrice"]
-    diff = max(500, abs(underlying - 22500))
+    diff = 500
     if abs(strike - underlying) > diff:
         return None
     ce = item.get("CE", {})

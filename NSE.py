@@ -14,6 +14,12 @@ st.set_page_config(page_title="NIFTY Option Chain", layout="wide")
 st.title("📊 NIFTY Option Chain (Live)")
 st.caption("Data Source: NSE India")
 
+# Proxy
+PROXY = (
+    f"http://{st.secrets.proxy.username}:"
+    f"{st.secrets.proxy.password}@"
+    f"{st.secrets.proxy.domain}:80"
+)
 # -------------------------------------------------
 # FETCH DATA FUNCTION
 # -------------------------------------------------
@@ -30,6 +36,10 @@ def fetch_option_chain(symbol, expiry):
 
     session = requests.Session()
     session.headers.update(headers)
+    session.proxies.update({
+        "http": PROXY,
+        "https": PROXY,
+    })
 
     # warm-up (important)
     session.get("https://www.nseindia.com", timeout=10)
@@ -60,6 +70,11 @@ if "prev_expiry" not in st.session_state:
 
 base_url = f"https://www.nseindia.com/api/option-chain-v3?type=Indices&symbol=NIFTY&expiry={DEFAULT_EXPIRY}"
 session = requests.Session()
+
+session.proxies.update({
+    "http": PROXY,
+    "https": PROXY,
+})
 session.headers.update(
     {
         "User-Agent": "Mozilla/5.0",
@@ -91,7 +106,7 @@ timestamp = base_data["records"]["timestamp"]
 st.sidebar.header("⚙️ Settings")
 expiry = st.sidebar.selectbox("Select Expiry Date", expiries, key="selected_expiry")
 auto_refresh = st.sidebar.checkbox("🔁 Auto Refresh", value=True)
-refresh_interval = st.sidebar.slider("Refresh interval (seconds)", 30, 120, 30)
+refresh_interval = st.sidebar.slider("Refresh interval (seconds)", 10, 120, 10)
 
 if st.session_state.prev_expiry != expiry:
     st.session_state.prev_oi = {}

@@ -58,7 +58,7 @@ def fetch_option_chain(symbol, expiry):
 # -------------------------------------------------
 # INITIAL LOAD
 # -------------------------------------------------
-DEFAULT_EXPIRY = "28-Apr-2026"
+DEFAULT_EXPIRY = "07-Jul-2026"
 if "selected_expiry" not in st.session_state:
     st.session_state.selected_expiry = DEFAULT_EXPIRY
     st.session_state.prev_oi = {}

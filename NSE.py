@@ -42,9 +42,9 @@ def fetch_option_chain(symbol, expiry):
     })
 
     # warm-up (important)
-    session.get("https://www.nseindia.com", timeout=10)
+    session.get("https://www.nseindia.com", timeout=30)
 
-    resp = session.get(url, timeout=10)
+    resp = session.get(url, timeout=30)
 
     if resp.status_code != 200:
         return None
@@ -84,7 +84,7 @@ session.headers.update(
 )
 
 print("Calling API to refresh data")
-resp = session.get(base_url, timeout=10)
+resp = session.get(base_url, timeout=30)
 
 if resp.status_code != 200:
     st.error(f"NSE blocked request (HTTP {resp.status_code})")

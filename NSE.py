@@ -106,7 +106,7 @@ timestamp = base_data["records"]["timestamp"]
 st.sidebar.header("⚙️ Settings")
 expiry = st.sidebar.selectbox("Select Expiry Date", expiries, key="selected_expiry")
 auto_refresh = st.sidebar.checkbox("🔁 Auto Refresh", value=True)
-refresh_interval = st.sidebar.slider("Refresh interval (seconds)", 10, 120, 10)
+refresh_interval = st.sidebar.slider("Refresh interval (seconds)", 30, 120, 30)
 
 if st.session_state.prev_expiry != expiry:
     st.session_state.prev_oi = {}

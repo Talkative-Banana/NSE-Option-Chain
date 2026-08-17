@@ -319,8 +319,8 @@ st.table(highlight(df))
 IST = ZoneInfo("Asia/Kolkata")
 now = datetime.now(IST)
 is_weekday = now.weekday() < 5
-start = dt_time(9, 0)
-end = dt_time(15, 30)
+start = dt_time(9, 15)
+end = dt_time(15, 15)
 is_market_time = start <= now.time() <= end
 
 if auto_refresh and is_weekday and is_market_time:
